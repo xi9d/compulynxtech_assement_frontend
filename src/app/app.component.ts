@@ -67,14 +67,93 @@ export class AppComponent implements OnInit {
   
   // Math reference for template
   Math = Math;
+  currentTime = new Date();
+  lastUpdateTime = new Date();
+  isDragging = false;
+  showDropdown = false;
 
+  operationTimer = {
+    isRunning: false,
+    startTime: 0,
+    elapsed: 0,
+    operation: ''
+  };
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
     this.loadClasses();
     this.loadStudents();
-  }
 
+     setInterval(() => {
+    this.currentTime = new Date();
+    if (this.operationTimer.isRunning) {
+      this.operationTimer.elapsed = Date.now() - this.operationTimer.startTime;
+    }
+  }, 1000);
+  }
+startTimer(operation: string) {
+  this.operationTimer = {
+    isRunning: true,
+    startTime: Date.now(),
+    elapsed: 0,
+    operation: operation
+  };
+}
+
+stopTimer() {
+  this.operationTimer.isRunning = false;
+}
+
+formatTimer(milliseconds: number): string {
+  const seconds = Math.floor(milliseconds / 1000);
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}:${(seconds % 60).toString().padStart(2, '0')}`;
+}
+
+// File drag and drop methods
+onDragOver(event: DragEvent) {
+  event.preventDefault();
+  this.isDragging = true;
+}
+
+onDragLeave(event: DragEvent) {
+  event.preventDefault();
+  this.isDragging = false;
+}
+
+onDrop(event: DragEvent) {
+  event.preventDefault();
+  this.isDragging = false;
+  const files = event.dataTransfer?.files;
+  if (files && files.length > 0) {
+    this.selectedExcelFile = files[0];
+  }
+}
+
+onCsvDrop(event: DragEvent) {
+  event.preventDefault();
+  this.isDragging = false;
+  const files = event.dataTransfer?.files;
+  if (files && files.length > 0) {
+    this.selectedCsvFile = files[0];
+  }
+}
+
+clearExcelFile() {
+  this.selectedExcelFile = null;
+}
+
+clearCsvFile() {
+  this.selectedCsvFile = null;
+}
+
+toggleDropdown() {
+  this.showDropdown = !this.showDropdown;
+}
+
+trackByStudentId(index: number, student: Student): number {
+  return student.id;
+}
   setActiveTab(tab: string) {
     this.activeTab = tab;
     if (tab === 'report') {
@@ -83,38 +162,41 @@ export class AppComponent implements OnInit {
   }
 
   // Generate Excel File
-  generateExcel() {
-    if (!this.recordCount || this.recordCount < 1) {
-      this.generateMessage = 'Please enter a valid number of records';
-      this.generateSuccess = false;
-      return;
-    }
-
-    this.isLoading = true;
-    this.generateMessage = '';
-
-    const params = new HttpParams().set('recordCount', this.recordCount.toString());
-
-    this.http.post<any>(`${this.apiUrl}/generate-excel`, null, { params })
-      .subscribe({
-        next: (response) => {
-          this.isLoading = false;
-          if (response.success) {
-            this.generateMessage = `Excel file generated successfully with ${response.recordCount} records. File: ${response.fileName}`;
-            this.generateSuccess = true;
-          } else {
-            this.generateMessage = response.message;
-            this.generateSuccess = false;
-          }
-        },
-        error: (error) => {
-          this.isLoading = false;
-          this.generateMessage = 'Error generating Excel file: ' + (error.error?.message || error.message);
-          this.generateSuccess = false;
-        }
-      });
+ generateExcel() {
+  if (!this.recordCount || this.recordCount < 1) {
+    this.generateMessage = 'Please enter a valid number of records';
+    this.generateSuccess = false;
+    return;
   }
 
+  this.startTimer('Generating Excel File');
+  this.isLoading = true;
+  this.generateMessage = '';
+
+  const params = new HttpParams().set('recordCount', this.recordCount.toString());
+
+  this.http.post<any>(`${this.apiUrl}/generate-excel`, null, { params })
+    .subscribe({
+      next: (response) => {
+        this.stopTimer();
+        this.isLoading = false;
+        this.lastUpdateTime = new Date();
+        if (response.success) {
+          this.generateMessage = `Excel file generated successfully with ${response.recordCount} records. File: ${response.fileName}`;
+          this.generateSuccess = true;
+        } else {
+          this.generateMessage = response.message;
+          this.generateSuccess = false;
+        }
+      },
+      error: (error) => {
+        this.stopTimer();
+        this.isLoading = false;
+        this.generateMessage = 'Error generating Excel file: ' + (error.error?.message || error.message);
+        this.generateSuccess = false;
+      }
+    });
+}
   // File Selection
   onExcelFileSelected(event: any) {
     const file = event.target.files[0];

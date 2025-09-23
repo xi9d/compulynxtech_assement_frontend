@@ -1,226 +1,509 @@
-<div class="container-fluid">
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-    <div class="container">
-      <a class="navbar-brand" href="#">Student Data Management</a>
-      <div class="navbar-nav">
-        <a class="nav-link" [class.active]="activeTab === 'generate'" (click)="setActiveTab('generate')">Generate Data</a>
-        <a class="nav-link" [class.active]="activeTab === 'process'" (click)="setActiveTab('process')">Process Excel</a>
-        <a class="nav-link" [class.active]="activeTab === 'upload'" (click)="setActiveTab('upload')">Upload CSV</a>
-        <a class="nav-link" [class.active]="activeTab === 'report'" (click)="setActiveTab('report')">Report</a>
+<div class="pos-container">
+  <!-- Header -->
+  <header class="pos-header">
+    <div class="header-left">
+      <div class="logo">
+        <i class="fas fa-graduation-cap"></i>
+        <span class="logo-text">StudentPOS</span>
       </div>
     </div>
-  </nav>
-
-  <div class="container mt-4">
     
-    <!-- Generate Data Tab -->
-    <div *ngIf="activeTab === 'generate'" class="card">
-      <div class="card-header">
-        <h4>Generate Excel File with Student Data</h4>
+    <div class="header-center">
+      <div class="current-time">
+        {{currentTime | date:'HH:mm:ss'}}
       </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <div class="form-group mb-3">
-              <label for="recordCount">Number of Records:</label>
-              <input type="number" class="form-control" id="recordCount" 
-                     [(ngModel)]="recordCount" min="1" max="1000000" placeholder="Enter number of records">
-            </div>
-            <button class="btn btn-success" (click)="generateExcel()" [disabled]="isLoading">
-              <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
-              Generate Excel File
-            </button>
+      <div class="operation-timer" *ngIf="operationTimer.isRunning">
+        <i class="fas fa-stopwatch"></i>
+        <span>{{formatTimer(operationTimer.elapsed)}}</span>
+      </div>
+    </div>
+    
+    <div class="header-right">
+      <div class="connection-status">
+        <span class="status-indicator"></span>
+        <span>Online</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div class="pos-main">
+    <!-- Left Sidebar Navigation -->
+    <nav class="pos-sidebar">
+      <div class="nav-menu">
+        <div class="nav-item" 
+             [class.active]="activeTab === 'generate'"
+             (click)="setActiveTab('generate')">
+          <i class="fas fa-file-excel"></i>
+          <span class="nav-text">Generate Data</span>
+          <div class="nav-indicator"></div>
+        </div>
+        
+        <div class="nav-item"
+             [class.active]="activeTab === 'process'"
+             (click)="setActiveTab('process')">
+          <i class="fas fa-cogs"></i>
+          <span class="nav-text">Process Excel</span>
+          <div class="nav-indicator"></div>
+        </div>
+        
+        <div class="nav-item"
+             [class.active]="activeTab === 'upload'"
+             (click)="setActiveTab('upload')">
+          <i class="fas fa-cloud-upload-alt"></i>
+          <span class="nav-text">Upload CSV</span>
+          <div class="nav-indicator"></div>
+        </div>
+        
+        <div class="nav-item"
+             [class.active]="activeTab === 'report'"
+             (click)="setActiveTab('report')">
+          <i class="fas fa-chart-bar"></i>
+          <span class="nav-text">Report</span>
+          <div class="nav-indicator"></div>
+        </div>
+      </div>
+      
+      <!-- Quick Stats -->
+      <div class="sidebar-stats">
+        <div class="stat-item">
+          <div class="stat-icon">
+            <i class="fas fa-users"></i>
           </div>
-          <div class="col-md-6">
-            <div class="alert alert-info">
-              <strong>Info:</strong> The system will generate student records with the following structure:
-              <ul class="mb-0 mt-2">
-                <li>Student ID: Incremental numbers starting from 1</li>
-                <li>First Name: Random alphabetic string (3-8 characters)</li>
-                <li>Last Name: Random alphabetic string (3-8 characters)</li>
-                <li>DOB: Random date between 2000-01-01 and 2010-12-31</li>
-                <li>Class: Random selection from Class1-Class5</li>
-                <li>Score: Random number between 55-75</li>
-              </ul>
-            </div>
+          <div class="stat-content">
+            <div class="stat-value">{{totalElements || 0}}</div>
+            <div class="stat-label">Total Students</div>
           </div>
         </div>
         
-        <div *ngIf="generateMessage" class="alert" [ngClass]="{'alert-success': generateSuccess, 'alert-danger': !generateSuccess}">
-          {{generateMessage}}
+        <div class="stat-item">
+          <div class="stat-icon">
+            <i class="fas fa-school"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{classes.length || 0}}</div>
+            <div class="stat-label">Classes</div>
+          </div>
         </div>
       </div>
-    </div>
+    </nav>
 
-    <!-- Process Excel Tab -->
-    <div *ngIf="activeTab === 'process'" class="card">
-      <div class="card-header">
-        <h4>Process Excel File to CSV</h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <div class="form-group mb-3">
-              <label for="excelFile">Select Excel File:</label>
-              <input type="file" class="form-control" id="excelFile" 
-                     (change)="onExcelFileSelected($event)" accept=".xlsx,.xls">
-            </div>
-            <button class="btn btn-primary" (click)="processExcel()" 
-                    [disabled]="!selectedExcelFile || isLoading">
-              <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
-              Process to CSV
-            </button>
+    <!-- Main Content Area -->
+    <main class="pos-content">
+      <!-- Generate Data Section -->
+      <section class="content-section" [class.active]="activeTab === 'generate'">
+        <div class="section-header">
+          <div class="section-icon">
+            <i class="fas fa-file-excel"></i>
           </div>
-          <div class="col-md-6">
-            <div class="alert alert-warning">
-              <strong>Note:</strong> This process will:
-              <ul class="mb-0 mt-2">
-                <li>Read the selected Excel file</li>
-                <li>Add 10 points to each student's score</li>
-                <li>Save the processed data as a CSV file</li>
-              </ul>
-            </div>
+          <div class="section-info">
+            <h2 class="section-title">Generate Excel Data</h2>
+            <p class="section-subtitle">Create student data records with customizable parameters</p>
           </div>
         </div>
-        
-        <div *ngIf="processMessage" class="alert" [ngClass]="{'alert-success': processSuccess, 'alert-danger': !processSuccess}">
-          {{processMessage}}
-        </div>
-      </div>
-    </div>
 
-    <!-- Upload CSV Tab -->
-    <div *ngIf="activeTab === 'upload'" class="card">
-      <div class="card-header">
-        <h4>Upload CSV to Database</h4>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6">
-            <div class="form-group mb-3">
-              <label for="csvFile">Select CSV File:</label>
-              <input type="file" class="form-control" id="csvFile" 
-                     (change)="onCsvFileSelected($event)" accept=".csv">
+        <div class="content-grid">
+          <div class="main-card">
+            <div class="card-header">
+              <h3>Configuration</h3>
             </div>
-            <button class="btn btn-info" (click)="uploadCsv()" 
-                    [disabled]="!selectedCsvFile || isLoading">
-              <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
-              Upload to Database
-            </button>
-          </div>
-          <div class="col-md-6">
-            <div class="alert alert-warning">
-              <strong>Note:</strong> This process will:
-              <ul class="mb-0 mt-2">
-                <li>Read the selected CSV file</li>
-                <li>Add 5 points to each student's score</li>
-                <li>Save all records to the PostgreSQL database</li>
-              </ul>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="fas fa-hashtag"></i>
+                  Number of Records
+                </label>
+                <div class="input-group">
+                  <input type="number" 
+                         class="form-control"
+                         [(ngModel)]="recordCount"
+                         min="1" 
+                         max="1000000"
+                         placeholder="Enter record count">
+                  <span class="input-suffix">records</span>
+                </div>
+              </div>
+              
+              <button class="btn btn-primary btn-lg" 
+                      (click)="generateExcel()" 
+                      [disabled]="isLoading || !recordCount">
+                <span *ngIf="isLoading" class="spinner"></span>
+                <i class="fas fa-download" *ngIf="!isLoading"></i>
+                Generate Excel File
+              </button>
+              
+              <div *ngIf="generateMessage" 
+                   class="alert" 
+                   [class.alert-success]="generateSuccess"
+                   [class.alert-error]="!generateSuccess">
+                <i class="fas" [class.fa-check-circle]="generateSuccess" 
+                   [class.fa-exclamation-triangle]="!generateSuccess"></i>
+                {{generateMessage}}
+              </div>
             </div>
           </div>
         </div>
-        
-        <div *ngIf="uploadMessage" class="alert" [ngClass]="{'alert-success': uploadSuccess, 'alert-danger': !uploadSuccess}">
-          {{uploadMessage}}
-        </div>
-      </div>
-    </div>
+      </section>
 
-    <!-- Report Tab -->
-    <div *ngIf="activeTab === 'report'" class="card">
-      <div class="card-header">
-        <h4>Student Report</h4>
-      </div>
-      <div class="card-body">
-        <!-- Filters -->
-        <div class="row mb-3">
-          <div class="col-md-3">
-            <label for="searchStudentId">Search by Student ID:</label>
-            <input type="number" class="form-control" id="searchStudentId" 
-                   [(ngModel)]="searchStudentId" placeholder="Enter Student ID">
+      <!-- Process Excel Section -->
+      <section class="content-section" [class.active]="activeTab === 'process'">
+        <div class="section-header">
+          <div class="section-icon">
+            <i class="fas fa-cogs"></i>
           </div>
-          <div class="col-md-3">
-            <label for="filterClass">Filter by Class:</label>
-            <select class="form-control" id="filterClass" [(ngModel)]="filterClass">
-              <option value="">All Classes</option>
-              <option *ngFor="let cls of classes" [value]="cls">{{cls}}</option>
-            </select>
+          <div class="section-info">
+            <h2 class="section-title">Process Excel File</h2>
+            <p class="section-subtitle">Convert Excel to CSV with score enhancement (+10 points)</p>
           </div>
-          <div class="col-md-3 d-flex align-items-end">
-            <button class="btn btn-secondary me-2" (click)="loadStudents()">
-              Search
-            </button>
-            <button class="btn btn-outline-secondary" (click)="clearFilters()">
-              Clear
-            </button>
+        </div>
+
+        <div class="content-grid">
+          <div class="main-card">
+            <div class="card-header">
+              <h3>File Processing</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="fas fa-file-excel"></i>
+                  Select Excel File
+                </label>
+                <div class="file-drop-zone" 
+                     [class.active]="isDragging"
+                     (dragover)="onDragOver($event)"
+                     (dragleave)="onDragLeave($event)"
+                     (drop)="onDrop($event)">
+                  <input type="file" 
+                         class="file-input"
+                         (change)="onExcelFileSelected($event)"
+                         accept=".xlsx,.xls"
+                         #excelFileInput>
+                  <div class="file-drop-content">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p class="drop-text">Drop Excel file here or click to browse</p>
+                    <p class="drop-hint">Supports .xlsx and .xls files</p>
+                  </div>
+                </div>
+                
+                <div *ngIf="selectedExcelFile" class="selected-file">
+                  <i class="fas fa-file-excel"></i>
+                  <span>{{selectedExcelFile.name}}</span>
+                  <button class="btn-clear" (click)="clearExcelFile()">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <button class="btn btn-primary btn-lg" 
+                      (click)="processExcel()" 
+                      [disabled]="!selectedExcelFile || isLoading">
+                <span *ngIf="isLoading" class="spinner"></span>
+                <i class="fas fa-sync-alt" *ngIf="!isLoading"></i>
+                Process to CSV
+              </button>
+              
+              <div *ngIf="processMessage" 
+                   class="alert" 
+                   [class.alert-success]="processSuccess"
+                   [class.alert-error]="!processSuccess">
+                <i class="fas" [class.fa-check-circle]="processSuccess" 
+                   [class.fa-exclamation-triangle]="!processSuccess"></i>
+                {{processMessage}}
+              </div>
+            </div>
           </div>
-          <div class="col-md-3 d-flex align-items-end">
+        </div>
+      </section>
+
+      <!-- Upload CSV Section -->
+      <section class="content-section" [class.active]="activeTab === 'upload'">
+        <div class="section-header">
+          <div class="section-icon">
+            <i class="fas fa-cloud-upload-alt"></i>
+          </div>
+          <div class="section-info">
+            <h2 class="section-title">Upload CSV to Database</h2>
+            <p class="section-subtitle">Store data in PostgreSQL with score boost (+5 points)</p>
+          </div>
+        </div>
+
+        <div class="content-grid">
+          <div class="main-card">
+            <div class="card-header">
+              <h3>Database Upload</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label class="form-label">
+                  <i class="fas fa-file-csv"></i>
+                  Select CSV File
+                </label>
+                <div class="file-drop-zone" 
+                     [class.active]="isDragging"
+                     (dragover)="onDragOver($event)"
+                     (dragleave)="onDragLeave($event)"
+                     (drop)="onCsvDrop($event)">
+                  <input type="file" 
+                         class="file-input"
+                         (change)="onCsvFileSelected($event)"
+                         accept=".csv"
+                         #csvFileInput>
+                  <div class="file-drop-content">
+                    <i class="fas fa-database"></i>
+                    <p class="drop-text">Drop CSV file here or click to browse</p>
+                    <p class="drop-hint">Supports .csv files only</p>
+                  </div>
+                </div>
+                
+                <div *ngIf="selectedCsvFile" class="selected-file">
+                  <i class="fas fa-file-csv"></i>
+                  <span>{{selectedCsvFile.name}}</span>
+                  <button class="btn-clear" (click)="clearCsvFile()">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+              </div>
+              
+              <button class="btn btn-primary btn-lg" 
+                      (click)="uploadCsv()" 
+                      [disabled]="!selectedCsvFile || isLoading">
+                <span *ngIf="isLoading" class="spinner"></span>
+                <i class="fas fa-database" *ngIf="!isLoading"></i>
+                Upload to Database
+              </button>
+              
+              <div *ngIf="uploadMessage" 
+                   class="alert" 
+                   [class.alert-success]="uploadSuccess"
+                   [class.alert-error]="!uploadSuccess">
+                <i class="fas" [class.fa-check-circle]="uploadSuccess" 
+                   [class.fa-exclamation-triangle]="!uploadSuccess"></i>
+                {{uploadMessage}}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Report Section -->
+      <section class="content-section" [class.active]="activeTab === 'report'">
+        <div class="section-header">
+          <div class="section-info">
+            <h2 class="section-title">Student Report</h2>
+            <p class="section-subtitle">View and export student data</p>
+          </div>
+          <div class="section-actions">
             <div class="dropdown">
-              <button class="btn btn-success dropdown-toggle" type="button" id="exportDropdown" 
-                      data-bs-toggle="dropdown" aria-expanded="false">
+              <button class="btn btn-secondary dropdown-toggle" 
+                      type="button" 
+                      (click)="toggleDropdown()">
+                <i class="fas fa-download"></i>
                 Export
               </button>
-              <ul class="dropdown-menu" aria-labelledby="exportDropdown">
-                <li><a class="dropdown-item" href="#" (click)="exportReport('excel'); $event.preventDefault()">Export to Excel</a></li>
-                <li><a class="dropdown-item" href="#" (click)="exportReport('csv'); $event.preventDefault()">Export to CSV</a></li>
-                <li><a class="dropdown-item" href="#" (click)="exportReport('pdf'); $event.preventDefault()">Export to PDF</a></li>
-              </ul>
+              <div class="dropdown-menu" [class.show]="showDropdown">
+                <a class="dropdown-item" (click)="exportReport('excel')">
+                  <i class="fas fa-file-excel"></i>
+                  Export to Excel
+                </a>
+                <a class="dropdown-item" (click)="exportReport('csv')">
+                  <i class="fas fa-file-csv"></i>
+                  Export to CSV
+                </a>
+                <a class="dropdown-item" (click)="exportReport('pdf')">
+                  <i class="fas fa-file-pdf"></i>
+                  Export to PDF
+                </a>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Students Table -->
-        <div class="table-responsive">
-          <table class="table table-striped table-hover">
-            <thead class="table-dark">
-              <tr>
-                <th>Student ID</th>
-                <th>First Name</th>
-                <th>Last Name</th>
-                <th>Date of Birth</th>
-                <th>Class</th>
-                <th>Score</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let student of students">
-                <td>{{student.studentId}}</td>
-                <td>{{student.firstName}}</td>
-                <td>{{student.lastName}}</td>
-                <td>{{student.dob | date:'yyyy-MM-dd'}}</td>
-                <td>{{student.className}}</td>
-                <td>{{student.score}}</td>
-              </tr>
-              <tr *ngIf="students.length === 0">
-                <td colspan="6" class="text-center">No students found</td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Filters -->
+        <div class="filters-card">
+          <div class="filters-grid">
+            <div class="filter-group">
+              <label class="form-label">
+                <i class="fas fa-search"></i>
+                Student ID
+              </label>
+              <input type="number" 
+                     class="form-control"
+                     [(ngModel)]="searchStudentId"
+                     placeholder="Enter Student ID">
+            </div>
+            
+            <div class="filter-group">
+              <label class="form-label">
+                <i class="fas fa-filter"></i>
+                Class Filter
+              </label>
+              <select class="form-control" [(ngModel)]="filterClass">
+                <option value="">All Classes</option>
+                <option *ngFor="let cls of classes" [value]="cls">{{cls}}</option>
+              </select>
+            </div>
+            
+            <div class="filter-actions">
+              <button class="btn btn-primary" (click)="loadStudents()">
+                <i class="fas fa-search"></i>
+                Search
+              </button>
+              <button class="btn btn-secondary" (click)="clearFilters()">
+                <i class="fas fa-times"></i>
+                Clear
+              </button>
+            </div>
+          </div>
         </div>
 
-        <!-- Pagination -->
-        <div class="row mt-3" *ngIf="totalElements > 0">
-          <div class="col-md-6">
-            <p>Showing {{(currentPage * pageSize) + 1}} to {{Math.min((currentPage + 1) * pageSize, totalElements)}} of {{totalElements}} entries</p>
+        <!-- Data Table -->
+        <div class="table-card">
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th><i class="fas fa-id-card"></i> Student ID</th>
+                  <th><i class="fas fa-user"></i> First Name</th>
+                  <th><i class="fas fa-user-tag"></i> Last Name</th>
+                  <th><i class="fas fa-calendar"></i> Date of Birth</th>
+                  <th><i class="fas fa-school"></i> Class</th>
+                  <th><i class="fas fa-star"></i> Score</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let student of students; trackBy: trackByStudentId" class="table-row">
+                  <td>
+                    <span class="student-id-badge">{{student.studentId}}</span>
+                  </td>
+                  <td class="student-name">{{student.firstName}}</td>
+                  <td class="student-name">{{student.lastName}}</td>
+                  <td>{{student.dob | date:'yyyy-MM-dd'}}</td>
+                  <td>
+                    <span class="class-badge">{{student.className}}</span>
+                  </td>
+                  <td>
+                    <span class="score-badge" [class.high-score]="student.score >= 80" 
+                          [class.medium-score]="student.score >= 60 && student.score < 80"
+                          [class.low-score]="student.score < 60">
+                      {{student.score}}
+                    </span>
+                  </td>
+                </tr>
+                <tr *ngIf="students.length === 0" class="no-data-row">
+                  <td colspan="6" class="no-data">
+                    <div class="no-data-content">
+                      <i class="fas fa-search fa-2x"></i>
+                      <h3>No Students Found</h3>
+                      <p>Try adjusting your search criteria</p>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <div class="col-md-6">
-            <nav>
-              <ul class="pagination justify-content-end">
-                <li class="page-item" [class.disabled]="currentPage === 0">
-                  <a class="page-link" href="#" (click)="changePage(currentPage - 1); $event.preventDefault()">Previous</a>
-                </li>
-                <li class="page-item" *ngFor="let page of getPageNumbers()" [class.active]="page === currentPage">
-                  <a class="page-link" href="#" (click)="changePage(page); $event.preventDefault()">{{page + 1}}</a>
-                </li>
-                <li class="page-item" [class.disabled]="currentPage === totalPages - 1">
-                  <a class="page-link" href="#" (click)="changePage(currentPage + 1); $event.preventDefault()">Next</a>
-                </li>
-              </ul>
-            </nav>
+          
+          <!-- Pagination -->
+          <div class="pagination-container" *ngIf="totalElements > 0">
+            <div class="pagination-info">
+              Showing {{(currentPage * pageSize) + 1}} to {{Math.min((currentPage + 1) * pageSize, totalElements)}} 
+              of {{totalElements}} entries
+            </div>
+            <div class="pagination">
+              <button class="page-btn" 
+                      [disabled]="currentPage === 0"
+                      (click)="changePage(currentPage - 1)">
+                <i class="fas fa-chevron-left"></i>
+              </button>
+              
+              <button *ngFor="let page of getPageNumbers()" 
+                      class="page-btn" 
+                      [class.active]="page === currentPage"
+                      (click)="changePage(page)">
+                {{page + 1}}
+              </button>
+              
+              <button class="page-btn" 
+                      [disabled]="currentPage === totalPages - 1"
+                      (click)="changePage(currentPage + 1)">
+                <i class="fas fa-chevron-right"></i>
+              </button>
+            </div>
           </div>
         </div>
+      </section>
+    </main>
+
+    <!-- Right Panel - Info & Status -->
+    <aside class="pos-panel">
+      <div class="panel-header">
+        <h3>System Status</h3>
       </div>
-    </div>
+      
+      <div class="panel-content">
+        <!-- Current Operation Status -->
+        <div class="status-section" *ngIf="operationTimer.isRunning">
+          <h4>Current Operation</h4>
+          <div class="operation-status">
+            <div class="status-item">
+              <div class="status-icon processing">
+                <i class="fas fa-sync-alt fa-spin"></i>
+              </div>
+              <div class="status-text">
+                <div class="operation-name">{{operationTimer.operation}}</div>
+                <div class="operation-time">{{formatTimer(operationTimer.elapsed)}}</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
+        <!-- Data Structure Info -->
+        <div class="info-section">
+          <h4>
+            <i class="fas fa-info-circle"></i>
+            Data Structure
+          </h4>
+          <div class="info-list">
+            <div class="info-item">
+              <i class="fas fa-id-card"></i>
+              <span><strong>Student ID:</strong> Auto-increment</span>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-user"></i>
+              <span><strong>Names:</strong> Random (3-8 chars)</span>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-calendar"></i>
+              <span><strong>DOB:</strong> 2000-2010 range</span>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-school"></i>
+              <span><strong>Class:</strong> Class1-Class5</span>
+            </div>
+            <div class="info-item">
+              <i class="fas fa-star"></i>
+              <span><strong>Score:</strong> Random (55-75)</span>
+            </div>
+          </div>
+        </div>
+
+      
+      </div>
+    </aside>
   </div>
+
+  <!-- Footer Status Bar -->
+  <footer class="pos-footer">
+    <div class="footer-left">
+      <span class="status-indicator active"></span>
+      <span>System Online</span>
+      <span class="separator">|</span>
+      <span>Last Updated: {{lastUpdateTime | date:'HH:mm:ss'}}</span>
+    </div>
+    
+    <div class="footer-right">
+      <span>StudentPOS v1.0</span>
+      <span class="separator">|</span>
+      <span>Angular 17</span>
+    </div>
+  </footer>
 </div>
