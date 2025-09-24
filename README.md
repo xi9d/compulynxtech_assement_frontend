@@ -1,5 +1,19 @@
 # CompulynxFrontend
 
+<a> https://generatordata.netlify.app/ </a><br>
+
+The Report Table:
+<img width="2555" height="1289" alt="full house" src="https://github.com/user-attachments/assets/fdb3ef2c-50ce-4b93-94d3-7b8579209b61" />
+
+
+The Upload csv page: 
+<img width="2560" height="1279" alt="SUCCESS UPLOAD" src="https://github.com/user-attachments/assets/eba4f647-443d-4d9a-9846-700938d7d544" />
+
+The generate data page
+
+<img width="2560" height="1288" alt="full generate" src="https://github.com/user-attachments/assets/6ed37006-ece3-40a2-b6e9-a416a18f0c49" />
+
+
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.2.
 
 ## Development server
